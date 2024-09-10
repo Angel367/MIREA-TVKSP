@@ -1,0 +1,47 @@
+# Указываем базовый образ для Java
+FROM openjdk:17-jdk-alpine AS builder
+
+# Добавляем метаданные
+LABEL maintainer="youremail@example.com"
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем файлы проекта
+COPY build.gradle settings.gradle /app/
+COPY gradle /app/gradle
+
+# Устанавливаем переменные окружения
+ENV GRADLE_HOME=/usr/local/gradle
+ENV PATH=$PATH:$GRADLE_HOME/bin
+
+# Скачиваем зависимости проекта
+RUN ./gradlew build --no-daemon || return 0
+
+# Копируем оставшиеся файлы
+COPY . .
+
+# Собираем приложение
+RUN ./gradlew clean build --no-daemon
+
+# Базовый образ для запуска Spring Boot
+FROM openjdk:17-jdk-alpine
+
+# Устанавливаем переменные окружения
+ENV SPRING_OUTPUT_ANSI_ENABLED=ALWAYS \
+    APP_HOME=/usr/app/
+
+# Указываем рабочую директорию
+WORKDIR $APP_HOME
+
+# Копируем jar файл из предыдущей стадии сборки
+COPY --from=builder /app/build/libs/*.jar app.jar
+
+# Открываем порт для приложения
+EXPOSE 8080
+
+# Настраиваем volume для логов приложения
+VOLUME /tmp
+
+# Запуск приложения
+ENTRYPOINT ["java", "-jar", "app.jar"]
