@@ -7,11 +7,19 @@ services:
     environment:
       POSTGRES_USER: adminuser
       POSTGRES_PASSWORD: 4WZsVGDrasDK
+      POSTGRES_DATABASE: postgres
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - my-network
+
 
 volumes:
   postgres_data:
+
+networks:
+  my-network:
+    driver: bridge

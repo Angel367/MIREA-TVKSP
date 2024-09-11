@@ -1,47 +1,28 @@
-# Указываем базовый образ для Java
 FROM openjdk:17-jdk-alpine AS builder
-
-# Добавляем метаданные
-LABEL maintainer="youremail@example.com"
-
-# Устанавливаем рабочую директорию
+LABEL author="Volkov Egor Alexandrovich"
+LABEL author_group="IKBO-24-21"
 WORKDIR /app
-
-# Копируем файлы проекта
 COPY build.gradle settings.gradle /app/
 COPY gradle /app/gradle
-
-# Устанавливаем переменные окружения
 ENV GRADLE_HOME=/usr/local/gradle
 ENV PATH=$PATH:$GRADLE_HOME/bin
-
-# Скачиваем зависимости проекта
-RUN ./gradlew build --no-daemon || return 0
-
-# Копируем оставшиеся файлы
 COPY . .
+RUN apk add --no-cache wget
+RUN wget -O /app/src/main/resources/static/gerb.png https://www.mirea.ru/upload/medialibrary/80f/MIREA_Gerb_Colour.png
+RUN ./gradlew build --no-daemon || return 0
+RUN chmod +x ./gradlew
+RUN ./gradlew build --no-daemon
+RUN apk add --no-cache tree
+CMD ls /app/src/main/resources/static/ && echo "Сборка завершена"
 
-# Собираем приложение
-RUN ./gradlew clean build --no-daemon
 
-# Базовый образ для запуска Spring Boot
 FROM openjdk:17-jdk-alpine
-
-# Устанавливаем переменные окружения
 ENV SPRING_OUTPUT_ANSI_ENABLED=ALWAYS \
-    APP_HOME=/usr/app/
-
-# Указываем рабочую директорию
+    APP_HOME=/usr/app/ \
+    DB_PORT=5432
 WORKDIR $APP_HOME
-
-# Копируем jar файл из предыдущей стадии сборки
 COPY --from=builder /app/build/libs/*.jar app.jar
-
-# Открываем порт для приложения
 EXPOSE 8080
-
-# Настраиваем volume для логов приложения
 VOLUME /tmp
-
-# Запуск приложения
 ENTRYPOINT ["java", "-jar", "app.jar"]
+ONBUILD RUN echo "Сборка и запуск произведены. Автор: Волков Егор Александрович"
