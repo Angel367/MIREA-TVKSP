@@ -15,11 +15,8 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - my-network
-
-
 volumes:
   postgres_data:
-
 networks:
   my-network:
     driver: bridge

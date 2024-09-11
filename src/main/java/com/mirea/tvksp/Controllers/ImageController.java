@@ -23,33 +23,25 @@ import java.nio.file.Paths;
 @RestController
 @RequestMapping("/api/images")
 public class ImageController {
-
     @Autowired
     private ResourceLoader resourceLoader;
-
     @GetMapping("/{filename}")
     public ResponseEntity<Resource> getImage(@PathVariable String filename) {
         try {
-            // Загружаем ресурс через classpath
             Resource resource = resourceLoader.getResource("classpath:/static/" + filename);
-
-            // Проверяем, что ресурс существует
             if (!resource.exists()) {
                 return ResponseEntity.notFound().build();
             }
 
-            // Определяем MIME-тип файла
             String contentType = URLConnection.guessContentTypeFromStream(resource.getInputStream());
             if (contentType == null) {
                 contentType = "application/octet-stream";
             }
 
-            // Возвращаем файл в виде ресурса
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
                     .body(resource);
-
         } catch (IOException e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
