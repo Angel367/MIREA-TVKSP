@@ -18,7 +18,7 @@ services:
     image: django:latest
     container_name: django
     build:
-      context: .
+      context: MIREA_TVKSP_backend
       dockerfile: Dockerfile
     environment:
       - POSTGRES_USER=adminuser

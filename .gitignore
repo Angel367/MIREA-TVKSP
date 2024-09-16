@@ -1,6 +1,6 @@
 # Compiled class file
 *.class
-
+postgres_data/
 # Log file
 *.log
 
