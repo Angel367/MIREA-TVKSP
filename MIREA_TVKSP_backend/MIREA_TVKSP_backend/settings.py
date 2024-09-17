@@ -43,11 +43,11 @@ INSTALLED_APPS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',
+        # 'rest_framework.authentication.BasicAuthentication',
     ],
 }
 
@@ -102,6 +102,11 @@ DATABASES = {
         'PORT': '5432',
     }
 }
+
+ZABBIX_DB_HOST = 'postgres'
+ZABBIX_DB_NAME = 'zabbix'
+ZABBIX_DB_USER = 'adminuser'
+ZABBIX_DB_PASSWORD = '4WZsVGDrasDK'
 
 
 # Password validation

@@ -7,32 +7,41 @@ services:
       POSTGRES_USER: adminuser
       POSTGRES_PASSWORD: 4WZsVGDrasDK
       POSTGRES_DB: postgres
-    ports:
-      - "5432:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
+      - ./init-zabbix-db.sql:/docker-entrypoint-initdb.d/init-zabbix-db.sql
+    ports:
+        - "5432:5432"
     networks:
-      - my-network
+        - my-network
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
+        tag: "postgres"
 
   django:
-    image: django:latest
     container_name: django
-    build:
-      context: MIREA_TVKSP_backend
-      dockerfile: Dockerfile
-    environment:
-      - POSTGRES_USER=adminuser
-      - POSTGRES_PASSWORD=4WZsVGDrasDK
-      - POSTGRES_DB=postgres
-      - POSTGRES_HOST=postgres
+    image: python:3.10
+    working_dir: /app
     ports:
       - "8000:8000"
     depends_on:
       - postgres
     networks:
       - my-network
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./MIREA_TVKSP_backend:/app
+    command: >
+      sh -c "pip install -r requirements.txt &&
+             python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
 
-  mongodb:
+  mongo:
     image: mongo:4.2
     container_name: mongodb
     networks:
@@ -41,12 +50,14 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
     container_name: elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
     environment:
       - discovery.type=single-node
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
+      - http.host=0.0.0.0
+      - transport.host=127.0.0.1
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     networks:
       - my-network
 
@@ -56,9 +67,9 @@ services:
     environment:
       GRAYLOG_PASSWORD_SECRET: somepasswordpepper
       GRAYLOG_ROOT_PASSWORD_SHA2: 03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4
-      GRAYLOG_HTTP_EXTERNAL_URI: http://127.0.0.1:9000/
+      GRAYLOG_HTTP_EXTERNAL_URI: http://graylog:9000/
     depends_on:
-      - mongodb
+      - mongo
       - elasticsearch
     ports:
       - "9000:9000"
@@ -73,27 +84,40 @@ services:
       DB_SERVER_HOST: postgres
       POSTGRES_USER: adminuser
       POSTGRES_PASSWORD: 4WZsVGDrasDK
+      POSTGRES_DB: zabbix
       ZBX_JAVAGATEWAY_ENABLE: "false"
-    depends_on:
-      - postgres
-    ports:
-      - "10051:10051"
     networks:
       - my-network
 
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-5.0-latest
+    container_name: zabbix-web
+    environment:
+      ZBX_SERVER_HOST: zabbix-server
+      ZBX_SERVER_PORT: 10051
+      DB_SERVER_HOST: postgres
+      POSTGRES_USER: adminuser
+      DB_SERVER_DBNAME: zabbix
+      DB_SERVER_SCHEMA: public
+      POSTGRES_PASSWORD: 4WZsVGDrasDK
+      PHP_TZ: "Europe/Moscow"
+    ports:
+        - "8080:8080"
+    networks:
+      - my-network
   zabbix-agent:
     image: zabbix/zabbix-agent:alpine-5.0-latest
     container_name: zabbix-agent
     environment:
       ZBX_SERVER_HOST: zabbix-server
       ZBX_SERVER_PORT: 10051
+      ZBX_HOSTNAME: zabbix-agent
     depends_on:
       - zabbix-server
     ports:
       - "10050:10050"
     networks:
       - my-network
-
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -101,6 +125,20 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
+    networks:
+      - my-network
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://adminuser:4WZsVGDrasDK@postgres:5432/postgres?sslmode=disable"
+      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
+    ports:
+      - "9187:9187"
+    depends_on:
+      - postgres
+      - prometheus
     networks:
       - my-network
 
@@ -118,9 +156,15 @@ services:
     image: adminer:latest
     container_name: adminer
     ports:
-      - "8080:8080"
+        - "8282:8282"
     networks:
       - my-network
+    command:
+      - 'php'
+      - '-S'
+      - '[::]:8282'
+      - '-t'
+      - '/var/www/html'
 
 networks:
   my-network:

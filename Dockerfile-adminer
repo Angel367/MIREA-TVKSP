@@ -1,0 +1,7 @@
+adminer:
+  image: custom-adminer
+  container_name: adminer
+  ports:
+    - "12222:12222"
+  networks:
+    - my-network
