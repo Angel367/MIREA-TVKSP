@@ -32,9 +32,22 @@ class PostSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    #author = UserSerializer(read_only=True)
     post = serializers.PrimaryKeyRelatedField(queryset=Post.objects.all())
 
     class Meta:
         model = Comment
         fields = '__all__'
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        author_id = request.data.get('author')
+        # Проверяем, что автор существует
+        try:
+            author = User.objects.get(id=author_id)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Invalid author ID.")
+
+        # Присваиваем автора
+        validated_data['author'] = author
+
+        return super().create(validated_data)
