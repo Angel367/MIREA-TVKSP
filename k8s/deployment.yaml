@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: volkov-ikbo-24-21-deployment
+spec:
+  replicas: 1 # количество реплик
+  selector:
+    matchLabels:
+      app: volkov-ikbo-24-21
+  template:
+    metadata:
+      labels:
+        app: volkov-ikbo-24-21
+    spec:
+      containers:
+      - name: volkov-ikbo-24-21-container
+        imagePullPolicy: Never
+        image: volkov-ikbo-24-21-obraz
+        ports:
+        - containerPort: 8080
