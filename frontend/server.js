@@ -1,9 +1,17 @@
 const http = require('http');
 const redis = require('redis');
 
+
+
 const client = redis.createClient({
-    host: 'redis-write',
-    password: "123456"
+    host: 'redis-write', password: "123456"
+});
+client.on('connect', function () {
+    console.log('Connected to Redis');
+});
+
+client.on('error', function (err) {
+    console.log('Redis error: ' + err);
 });
 
 const port = 8080;
@@ -39,31 +47,35 @@ const requestHandler = (request, response) => {
             try {
                 let body = [];
                 request.on('data', (chunk) => {
+                    console.log('Received chunk');
                     body.push(chunk);
                 }).on('end', () => {
+                    console.log('End of request');
                     body = Buffer.concat(body).toString();
                     const msg = JSON.parse(body);
                     journals.push(msg);
-                    client.set(key, JSON.stringify(journals));
+                    client.set(key, JSON.stringify(journals), () => {
+                        console.log('Data saved to Redis');
+                    });
                     response.writeHead(200);
                     response.end(JSON.stringify(journals));
                 });
             } catch (err) {
                 response.writeHeader(500);
                 response.end(err.toString());
-                return;
+
             }
         }
     });
-    return;
+
 }
 
 const server = http.createServer(requestHandler);
 
 server.listen(port, (err) => {
-  if (err) {
-    return console.log('could not start server', err);
-  }
+    if (err) {
+        return console.log('could not start server', err);
+    }
 
-  console.log('api server up and running.');
+    console.log('api server up and running.');
 })

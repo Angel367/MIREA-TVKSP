@@ -16,7 +16,7 @@ spec:
         app: frontend
     spec:
       containers:
-      - image: journal-server:0.0.10
+      - image: journal-server:0.0.11
         imagePullPolicy: Never
         name: frontend
         volumeMounts:

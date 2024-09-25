@@ -17,6 +17,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: frontend
+            name: fileserver
             port:
               number: 80
